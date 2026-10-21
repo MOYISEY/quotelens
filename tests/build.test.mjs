@@ -9,7 +9,7 @@ test('clean build removes stale output and each manifest hash matches the source
   const fixture=await mkdtemp(join(root,'.quotelens-test-'));
   try{
     await mkdir(join(fixture,'src'));await mkdir(join(fixture,'scripts'));
-    const files=['index.html','favicon.svg','src/styles.css','src/app.js','src/engine.js','src/io.js','src/explain.js'];
+    const files=['index.html','favicon.svg','src/styles.css','src/app.js','src/engine.js','src/io.js','src/explain.js','src/writer.js'];
     for(const file of [...files,'scripts/build.mjs'])await copyFile(resolve(root,file),resolve(fixture,file));
     execFileSync(process.execPath,['scripts/build.mjs'],{cwd:fixture});
     await writeFile(join(fixture,'dist/src/retired-synthetic.mjs'),'retired synthetic output');

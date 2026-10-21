@@ -10,7 +10,7 @@
     "build": "node scripts/build.mjs",
     "test": "node --test tests/*.test.mjs",
     "test:browser": "npm run build && playwright test",
-    "check": "node --check src/app.js && node --check src/engine.js && node --check src/io.js && node --check src/explain.js"
+    "check": "node --check src/app.js && node --check src/engine.js && node --check src/io.js && node --check src/explain.js && node --check src/writer.js"
   },
   "engines": {
     "node": ">=22"

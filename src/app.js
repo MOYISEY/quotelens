@@ -1,11 +1,14 @@
 import { demo, compare, money, CURRENCIES, UNITS, blankLine, blankSupplier, MAX_ITEMS, MAX_SUPPLIERS } from './engine.js';
 import { backup, restore, saveLocal, readLocal, exportInputCSV, importInputCSV, report, reportCSV, prepareImportText, STORAGE_KEY } from './io.js';
 import { explainComparison, previewQuote, decimalText } from './explain.js';
+import { createWriterSession } from './writer.js';
 
 const root = document.querySelector('#app');
-let state, tab = 'compare', activeSupplier = null, staged = null, importText = '', importError = '', toast = '', previous = null, storageBlocked = false, storageError = false, storageConflict = false;
-try { state = readLocal(localStorage) || demo(); } catch { state = demo(); storageBlocked = true; }
-try { const old = localStorage.getItem('quotelens.previous.v1'); if (old) previous = restore(old); } catch { /* optional undo snapshot */ }
+let state = demo(), tab = 'compare', activeSupplier = null, staged = null, importText = '', importError = '', toast = '', previous = null, storageBlocked = false, storageError = false, storageConflict = false;
+let dirty = false, memoryOnly = false, previousPending = false, confirmReload = false;
+let browserLocks;
+try { browserLocks = globalThis.navigator?.locks; } catch { /* fail closed */ }
+const writer = createWriterSession(browserLocks);
 const t = (ru, en) => state.lang === 'ru' ? ru : en;
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const uid = prefix => `${prefix}_${crypto.randomUUID().slice(0,8)}`;
@@ -36,7 +39,63 @@ function issueText(issue) {
   return `${item ? item.name + ': ' : ''}${map[issue.code] || issue.code}`;
 }
 function persist() {
-  if (!storageBlocked) storageError = !saveLocal(localStorage, state);
+  if (!canEdit()) return false;
+  dirty = true;
+  if (!writer.owns || storageBlocked) return false;
+  try {
+    // Keep the old primary snapshot if saving the promised undo snapshot fails.
+    if (previousPending) {
+      localStorage.setItem('quotelens.previous.v1', backup(previous));
+      previousPending = false;
+    }
+    storageError = !saveLocal(localStorage, state);
+  } catch { storageError = true; }
+  if (!storageError) dirty = false;
+  return !storageError;
+}
+function canEdit() { return memoryOnly || (writer.owns && !storageConflict); }
+function loadSaved(initial) {
+  try {
+    const next = readLocal(localStorage) || demo();
+    let undo = null;
+    try { const old = localStorage.getItem('quotelens.previous.v1'); if (old) undo = restore(old); } catch { /* optional undo */ }
+    state = next; previous = undo; dirty = false; previousPending = false;
+    storageBlocked = false; storageError = false; storageConflict = false;
+  } catch {
+    storageBlocked = true;
+    if (initial) state = demo();
+  }
+}
+async function beginSession(initial = false) {
+  memoryOnly = false;
+  const acquired = await writer.acquire();
+  // A new owner must read the current saved snapshot, never save its stale view.
+  if (acquired || initial) loadSaved(initial);
+  confirmReload = false;
+  render();
+}
+function saveStatusText() {
+  if (dirty) return t('Не сохранено · скачайте JSON', 'Unsaved · download JSON');
+  if (memoryOnly) return t('Только в памяти', 'Memory only');
+  if (writer.status === 'checking') return t('Проверка доступа к записи', 'Checking write access');
+  if (!writer.owns) return t('Только чтение', 'Read only');
+  return storageBlocked ? t('Только в памяти', 'In memory only') : t('Сохраняется в браузере', 'Saved in this browser');
+}
+function storageNotice() {
+  const exportButton = button(t('Скачать текущий JSON', 'Download current JSON'), 'download-backup', 'button secondary');
+  if (confirmReload) return `<div class="alert danger" role="alert"><p>${t('В этой вкладке есть несохранённая работа. Сначала скачайте JSON и убедитесь, что файл сохранён. Загрузка сохранённой корзины заменит эту версию в памяти.', 'This tab has unsaved work. Download JSON and verify the file first. Loading the saved basket will replace this in-memory version.')}</p>${exportButton}${button(t('Загрузить сохранённое', 'Load saved version'), 'confirm-reload', 'button secondary')}${button(t('Оставить работу', 'Keep my work'), 'cancel-reload', 'text-button')}</div>`;
+  if (writer.status === 'checking') return `<div class="alert" role="status">${t('Проверяем доступ к записи. До завершения корзина доступна только для чтения.', 'Checking write access. The basket is read only until this finishes.')}</div>`;
+  if (!writer.owns && !memoryOnly) {
+    const unavailable = ['unsupported', 'unavailable'].includes(writer.status);
+    return `<div class="alert danger" role="alert"><strong>${t('Только чтение.', 'Read only.')}</strong><p>${unavailable ? t('Браузер не предоставил безопасную блокировку записи. Автосохранение отключено. Можно просматривать и экспортировать корзину или явно работать только в памяти.', 'A safe writer lock is unavailable in this browser. Autosave is off. View/export the basket, or explicitly work in memory only.') : t('Другая вкладка редактирует QuoteLens или обнаружен конфликт. Эта вкладка ничего не записывает. Закройте редактирующую вкладку, затем повторите проверку: загрузится актуальная сохранённая корзина.', 'Another tab is editing QuoteLens, or a conflict was detected. This tab writes nothing. Close the editing tab, then try again to load the latest saved basket.')}</p>${dirty ? `<p>${t('Несохранённая версия остаётся в этой вкладке. Скачайте её до продолжения.', 'Unsaved work remains in this tab. Download it before continuing.')}</p>` : ''}${exportButton}${unavailable ? button(t('Работать без автосохранения', 'Work without autosave'), 'memory-only', 'button secondary') : button(t('Попробовать редактировать здесь', 'Try editing here'), 'retry-writer', 'button secondary')}</div>`;
+  }
+  if (dirty || memoryOnly || storageBlocked) return `<div class="alert danger" role="alert"><strong>${dirty ? t('Есть несохранённые изменения.', 'Unsaved changes.') : t('Автосохранение недоступно.', 'Autosave is unavailable.')}</strong><p>${storageError ? t('Не удалось сохранить в браузере. Работа остаётся в памяти.', 'Browser save failed. Work remains in memory.') : memoryOnly ? t('Режим только в памяти: эта вкладка не записывает данные в хранилище.', 'Memory-only mode: this tab does not write to storage.') : t('Хранилище недоступно или сохранённая запись повреждена. Исходная запись не перезаписана.', 'Storage is unavailable or saved data is damaged. The original record has not been overwritten.')}</p><p>${t('Скачайте JSON и проверьте файл до закрытия или перезагрузки. Предупреждение при уходе может не появиться, особенно на мобильном устройстве.', 'Download JSON and verify the file before closing or reloading. A leave warning may not appear, especially on mobile.')}</p>${exportButton}${writer.owns && !storageBlocked ? button(t('Повторить сохранение', 'Retry saving'), 'retry-save', 'button secondary') : ''}</div>`;
+  return '';
+}
+function refreshSaveStatus() {
+  root.querySelector('#storage-notice').innerHTML = storageNotice();
+  const status = root.querySelector('.save-status');
+  status.textContent = saveStatusText(); status.dataset.mode = memoryOnly ? 'memory' : writer.status;
 }
 function options(values, current, label = v => v) { return values.map(v => `<option value="${esc(v)}" ${v === current ? 'selected' : ''}>${esc(label(v))}</option>`).join(''); }
 function field(label, value, attrs = '', hint = '') {
@@ -44,7 +103,8 @@ function field(label, value, attrs = '', hint = '') {
 }
 function select(label, content, attrs) { return `<label class="field"><span>${label}</span><select ${attrs}>${content}</select></label>`; }
 function checkbox(label, checked, attrs) { return `<label class="check"><input type="checkbox" ${checked ? 'checked' : ''} ${attrs}><span>${label}</span></label>`; }
-function button(label, action, className = 'button', attrs = '') { return `<button class="${className}" data-action="${action}" ${attrs}>${label}</button>`; }
+const editActions = new Set(['new','add-item','remove-item','add-supplier','remove-supplier','review-import','apply-import','undo-import']);
+function button(label, action, className = 'button', attrs = '') { return `<button class="${className}" data-action="${action}" ${!canEdit() && editActions.has(action) ? 'disabled' : ''} ${attrs}>${label}</button>`; }
 
 function actionFocus(action, id) {
   return `[data-action="${action}"]${id ? `[data-id="${id}"]` : ''}`;
@@ -61,12 +121,11 @@ function render(focusSelector) {
     <main id="main" class="shell">
       <section class="page-heading"><div><p class="eyebrow">${t('РАБОЧАЯ КОРЗИНА','COMPARISON WORKSPACE')}</p><h1>${t('Смотрите на полный итог.','See the whole cost.')}</h1><p class="intro">${t('Одинаковая корзина. Все упаковки, условия и расходы — в одном расчёте.','Same basket. Every pack, condition and cost in one calculation.')}</p></div>
         <div class="heading-actions">${button(t('Новая корзина','New basket'),'new','button secondary')}${button(t('↓ Экспорт','↓ Export'),'export','button primary')}</div></section>
-      ${storageBlocked ? `<div class="alert danger" role="alert">${storageConflict?t('Корзина изменена в другой вкладке. Автосохранение здесь остановлено. Скачайте текущий JSON, затем перезагрузите страницу для загрузки последней версии.','The basket changed in another tab. Autosave is stopped here. Download your current JSON, then reload to load the latest version.'):t('Сохранение недоступно или сохранённые данные повреждены. Показано демо; исходное хранилище не перезаписано. Экспортируйте данные, затем создайте новую корзину или восстановите JSON.','Storage is unavailable or saved data is damaged. Showing demo; the original storage has not been overwritten. Export, then create a new basket or restore JSON.')}</div>` : ''}
-      ${storageError ? `<div class="alert danger" role="alert">${t('Не удалось сохранить в браузере. Скачайте JSON-копию перед закрытием.','Browser save failed. Download a JSON backup before closing.')}</div>` : ''}
+      <div id="storage-notice" aria-live="polite">${storageNotice()}</div>
       ${toast ? `<div class="alert notification" role="status">${esc(toast)}${button('×','dismiss','icon-button',`aria-label="${t('Закрыть уведомление','Dismiss notification')}"`)}</div>` : ''}
-      <div class="workspace-bar"><div class="workspace-name"><span class="folder-icon">▤</span><strong>${esc(state.title) || t('Без названия','Untitled')}</strong>${state.demo ? `<span class="badge neutral">${t('Демо · вымышленные данные','Demo · fictional data')}</span>` : ''}</div><span class="save-status">${storageBlocked || storageError ? t('Только в памяти','In memory only') : t('Сохраняется в браузере','Saved in this browser')}</span></div>
+      <div class="workspace-bar"><div class="workspace-name"><span class="folder-icon">▤</span><strong>${esc(state.title) || t('Без названия','Untitled')}</strong>${state.demo ? `<span class="badge neutral">${t('Демо · вымышленные данные','Demo · fictional data')}</span>` : ''}</div><span class="save-status" data-testid="save-status" data-mode="${memoryOnly ? 'memory' : writer.status}">${saveStatusText()}</span></div>
       <nav class="tabs" aria-label="${t('Разделы корзины','Workspace sections')}">${[['compare',t('Сравнение','Comparison')],['edit',t('Товары и предложения','Items & quotes')],['files',t('Импорт и файлы','Import & files')],['method',t('Как считаем','How it works')]].map(([key,label]) => button(label,key,tab === key ? 'tab active' : 'tab',`aria-current="${tab === key ? 'page' : 'false'}"`)).join('')}</nav>
-      ${tab === 'compare' ? comparison(result) : tab === 'edit' ? editor(result) : tab === 'files' ? files() : method()}
+      ${tab === 'compare' ? comparison(result) : tab === 'edit' ? `<fieldset class="editing-access" ${canEdit() ? '' : 'disabled'}>${editor(result)}</fieldset>` : tab === 'files' ? files() : method()}
       <footer><span>QuoteLens <span class="muted">/ MVP 0.1</span></span><p>${t('Инструмент оценки, не гарантия выгодности покупки. Условия и качество подтверждаете вы.','An estimation tool, not a guarantee of a good purchase. You verify terms and quality.')}</p><span class="footer-local">${t('Без аккаунта · без отправки данных','No account · no data uploads')}</span></footer>
     </main>`;
   const target = restoreFocus && root.querySelector(restoreFocus);
@@ -175,8 +234,8 @@ function files() {
     <div><strong>${t('Расчёт JSON + CSV','Calculation JSON + CSV')}</strong><p>${t('JSON — входные данные, формулы и точные значения в копейках/центах; CSV — удобная таблица результатов.','JSON includes inputs and exact amounts in minor units; CSV gives a readable results table.')}</p><div class="row-actions">${button(t('Расчёт JSON','Calculation JSON'),'download-report','button secondary')}${button(t('Результат CSV','Results CSV'),'download-results','button secondary')}</div></div>
     <div><strong>${t('Шаблон CSV','CSV template')}</strong><p>${t('Текущая корзина в формате импорта: строка на товар × поставщик. Понятная схема — ниже.','Current basket in import format: one row per item × supplier. Schema explained below.')}</p>${button(t('Скачать шаблон CSV','Download CSV template'),'download-template','button secondary')}</div></div></div>
     <div class="panel file-panel"><p class="eyebrow">${t('ИМПОРТ С ПРОВЕРКОЙ','REVIEWED IMPORT')}</p><h2>${t('Восстановить или импортировать','Restore or import')}</h2><p>${t('JSON сохраняет подтверждения. CSV сбрасывает их: качество и полноту расходов нужно проверить заново.','JSON preserves confirmations. CSV resets them: review quality and cost completeness again.')}</p>
-      <label class="file-picker"><span>${t('Выбрать CSV или JSON (до 1 МБ)','Choose CSV or JSON (up to 1 MB)')}</span><input id="file-input" type="file" accept=".csv,.json,text/csv,application/json"></label>
-      <label class="field"><span>${t('Или вставить CSV / JSON','Or paste CSV / JSON')}</span><textarea id="import-text" rows="7" maxlength="1000000" spellcheck="false" placeholder="comparison_currency,item_id,…">${esc(importText)}</textarea></label>
+      <label class="file-picker"><span>${t('Выбрать CSV или JSON (до 1 МБ)','Choose CSV or JSON (up to 1 MB)')}</span><input id="file-input" type="file" ${canEdit() ? '' : 'disabled'} accept=".csv,.json,text/csv,application/json"></label>
+      <label class="field"><span>${t('Или вставить CSV / JSON','Or paste CSV / JSON')}</span><textarea ${canEdit() ? '' : 'disabled'} id="import-text" rows="7" maxlength="1000000" spellcheck="false" placeholder="comparison_currency,item_id,…">${esc(importText)}</textarea></label>
       <div class="row-actions">${button(t('Проверить импорт','Review import'),'review-import','button primary')}${button(t('Показать текущий CSV','Show current CSV'),'show-csv','text-button')}</div>
       ${importError?`<div class="alert danger" role="alert">${esc(importError)}</div>`:''}
       ${staged?`<div class="import-preview"><strong>${t('Готово к замене корзины','Ready to replace the basket')}</strong><p>${staged.items.length} ${t('товаров','items')} · ${staged.suppliers.length} ${t('поставщиков','suppliers')} · ${esc(staged.currency)}</p><p>${t('Текущая версия сохранится для отмены. Неполные данные останутся вне сравнения.','The current version is saved for undo. Incomplete quotes stay excluded.')}</p>${button(t('Применить импорт','Apply import'),'apply-import','button primary')}${button(t('Отмена','Cancel'),'cancel-import','text-button')}</div>`:''}
@@ -195,8 +254,10 @@ function method() {
 }
 
 function checkpoint() {
+  if (!canEdit()) return false;
   previous = structuredClone(state);
-  try { localStorage.setItem('quotelens.previous.v1',backup(previous)); } catch { /* in-memory undo still works */ }
+  previousPending = true;
+  return true;
 }
 function download(content, filename, type) {
   const url=URL.createObjectURL(new Blob([content],{type})); const link=document.createElement('a');
@@ -230,12 +291,10 @@ function refreshEditor() {
   if(newIssues)root.querySelector('.editor-panel').append(newIssues);
   root.querySelector('.workspace-name > strong').textContent=state.title||t('Без названия','Untitled');
   if(!state.demo)root.querySelector('.workspace-name .badge')?.remove();
-  const status=root.querySelector('.save-status'); status.textContent=storageBlocked||storageError?t('Только в памяти','In memory only'):t('Сохраняется в браузере','Saved in this browser');
-  if(storageError&&!root.querySelector('.storage-failure')) {
-    const warning=document.createElement('div');warning.className='alert danger storage-failure';warning.role='alert';warning.textContent=t('Сохранение не удалось. Скачайте JSON перед закрытием.','Save failed. Download JSON before closing.');root.querySelector('.workspace-bar').before(warning);
-  }
+  refreshSaveStatus();
 }
 root.addEventListener('input',e=>{
+  if (!canEdit()) return;
   if(e.target.id==='import-text') {
     const draft=prepareImportText(e.target.value);importText=draft.text;staged=null;
     const preview=root.querySelector('.import-preview');if(preview)preview.remove();
@@ -244,6 +303,7 @@ root.addEventListener('input',e=>{
   if(e.target.dataset.scope)updateField(e.target);
 });
 root.addEventListener('change',async e=>{
+  if (!canEdit()) return;
   const el=e.target;
   if(el.id==='file-input') {
     const file=el.files[0]; if(!file)return;
@@ -253,6 +313,7 @@ root.addEventListener('change',async e=>{
   if(el.dataset.scope)updateField(el);
 });
 function updateField(el) {
+  if (!canEdit()) return;
   const {scope,id:targetId,item: itemId,field:key}=el.dataset; if(!scope)return;
   const value=el.type==='checkbox'?el.checked:el.value;
   if(scope==='state') state[key]=value;
@@ -266,13 +327,25 @@ function updateField(el) {
   persist(); refreshEditor();
 }
 root.addEventListener('toggle',e=>{if(e.target.matches('.supplier-editor')) {if(e.target.open)activeSupplier=e.target.dataset.supplier;else if(activeSupplier===e.target.dataset.supplier)activeSupplier=null;}},true);
-window.addEventListener('storage',e=>{if(e.key===STORAGE_KEY||e.key===null){storageBlocked=true;storageConflict=true;render();}});
+window.addEventListener('storage',e=>{if(e.key===STORAGE_KEY||e.key===null){
+  if (writer.owns || memoryOnly || dirty) dirty = true;
+  writer.release(); memoryOnly=false; storageBlocked=true;storageConflict=true;render();
+}});
+window.addEventListener('beforeunload',e=>{if(dirty){e.preventDefault();e.returnValue='';}});
+window.addEventListener('pagehide',()=>{writer.release();});
+window.addEventListener('pageshow',e=>{if(e.persisted){memoryOnly=false;render();}});
 root.addEventListener('click',e=>{
   const el=e.target.closest('[data-action]'); if(!el||el.disabled)return;
   const action=el.dataset.action; toast='';
+  if (editActions.has(action) && !canEdit()) return;
   let focusSelector=actionFocus(action,el.dataset.id);
   if(['compare','edit','files','method'].includes(action)) {tab=action;staged=null;}
-  else if(action==='ru'||action==='en') {state.lang=action;persist();}
+  else if(action==='ru'||action==='en') {state.lang=action;if(canEdit())persist();}
+  else if(action==='retry-writer') {if(dirty)confirmReload=true;else ready=beginSession();}
+  else if(action==='confirm-reload'&&confirmReload) {ready=beginSession();}
+  else if(action==='cancel-reload') {confirmReload=false;}
+  else if(action==='memory-only'&&!writer.owns&&['unsupported','unavailable'].includes(writer.status)) {memoryOnly=true;}
+  else if(action==='retry-save') {persist();}
   else if(action==='edit-supplier') {tab='edit';activeSupplier=el.dataset.id;focusSelector=`[data-scope="supplier"][data-id="${activeSupplier}"][data-field="name"]`;}
   else if(action==='export')tab='files';
   else if(action==='new') {
@@ -310,4 +383,5 @@ root.addEventListener('click',e=>{
   else if(action==='download-template') {download(exportInputCSV(state),'quotelens-input.csv','text/csv;charset=utf-8');return;}
   render(focusSelector);
 });
+let ready = beginSession(true);
 render();

@@ -8,10 +8,13 @@ export const test = base.extend({
   runtimeChecks: [async ({ context, page, baseURL }, use) => {
     const failures = [];
     const requests = [];
-    page.on('pageerror', error => failures.push(error.message));
-    page.on('console', message => {
-      if (['error', 'warning'].includes(message.type())) failures.push(message.text());
-    });
+    const watch = target => {
+      target.on('pageerror', error => failures.push(error.message));
+      target.on('console', message => {
+        if (['error', 'warning'].includes(message.type())) failures.push(message.text());
+      });
+    };
+    watch(page); context.on('page', watch);
     // The only network target permitted by this test harness is its own static server.
     await context.route('**/*', async route => {
       const url = new URL(route.request().url());
@@ -31,6 +34,7 @@ export { expect };
 
 export async function cleanStart(page) {
   await page.goto('/');
+  await expect(page.getByTestId('save-status')).toHaveAttribute('data-mode', 'writer');
   await expect(page.getByRole('button', { name: 'RU', exact: true }), 'Fresh context starts with RU demo').toHaveAttribute('aria-pressed', 'true');
   await page.getByRole('button', { name: 'EN', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'See the whole cost.', exact: true })).toBeVisible();

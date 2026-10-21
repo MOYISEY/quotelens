@@ -77,7 +77,7 @@ Reference example: restore [20-unit basket](examples/reference-20-units.json). A
 
 Quote data is processed in your browser. There is no application data API, telemetry, external font or third-party script. CSP blocks data connections (`connect-src 'none'`). Static hosting receives normal page/asset requests; the app does not upload your basket or imported files.
 
-Browser `localStorage` belongs to the current origin/profile and is not encrypted. Clearing browser data, changing origin/port or using another profile can lose access to a basket. Export JSON backups. Storage errors are visible; malformed saved data is not silently overwritten. Work in one tab: an external storage change stops autosave and shows a conflict warning. This is conflict detection, not a transactional lock. Undo holds one prior replacement/deletion, not a full version history.
+Browser `localStorage` belongs to the current origin/profile and is not encrypted. Clearing browser data, changing origin/port or using another profile can lose access to a basket. Export JSON backups. Storage errors are visible; malformed saved data is not silently overwritten. One editing tab per origin is coordinated with Web Locks. Other tabs are read only; close the owner and choose Try editing here to load the latest saved version. Without a safe lock, the default is read only, with an explicit memory-only mode that never writes storage. Failed saves/conflicts keep an unsaved status and exportable JSON; downloading does not clear dirty. The browser leave warning is only a precaution and can be suppressed, especially on mobile. See [durability behavior and limits](docs/DATA-DURABILITY.md). Undo holds one prior replacement/deletion, not a full version history.
 
 ## Limits
 

@@ -13,7 +13,7 @@ npm test
 npm run test:browser
 ```
 
-`npm ci --ignore-scripts` installs the lockfile and does not run install hooks. The commands do not download browser binaries or system packages. `test:browser` builds `dist`, starts its own static server on `127.0.0.1:4832`, runs eight tests in headless Chrome, and stops its server. It does not connect to the public demo or a user's Chrome profile. Each test gets a new isolated browser context and empty storage. No saved authentication, persistent browser profile or app-state injection is used.
+`npm ci --ignore-scripts` installs the lockfile and does not run install hooks. The commands do not download browser binaries or system packages. `test:browser` builds `dist`, starts its own static server on `127.0.0.1:4832`, runs eleven tests in headless Chrome, and stops its server. It does not connect to the public demo or a user's Chrome profile. Each test gets a new isolated browser context and empty storage. No saved authentication, persistent browser profile or app-state injection is used.
 
 The port must be free. The runner refuses to reuse an existing server rather than test an unknown app. To use another port in PowerShell:
 
@@ -26,6 +26,8 @@ Remove-Item Env:QUOTELENS_SMOKE_PORT
 `QUOTELENS_SMOKE_BROWSER=msedge` uses an already installed Edge; `chromium` uses an already provisioned Playwright Chromium. These options never install a browser. Chrome is the default and the locally verified target. If a browser is missing, the run fails with the Playwright launch diagnostic; there is no automatic fallback/download. Package versions are locked; an installed Chrome channel can update independently, so record its version with results.
 
 For an independently provisioned CI runner with Chrome, the same commands apply. Set `CI=true` in that runner's normal environment. There is no CI YAML change in this candidate, no secrets, and no new access. Do not add browser-install steps or publish artifacts without considering that separate environment's constraints.
+
+The eight core smoke scenarios are retained. Three additional data-durability scenarios check real two-tab Web Locks/fresh takeover, no-lock memory fallback and dirty quota failure with native headless beforeunload handling. See [data durability](DATA-DURABILITY.md).
 
 ## Assertions and scope
 
@@ -60,8 +62,10 @@ To view the HTML report yourself, use `npx --no-install playwright show-report b
 
 ## Limits
 
-Local verification on 2026-10-21: Node 24.15.0, npm 11.12.1, Windows, installed Chrome 155.0.8059.85. A clean offline `npm ci --ignore-scripts` from the populated package cache installed the three locked packages. Syntax checks and 64/64 Node tests passed; the final browser run passed 8/8 in 10.3 seconds, with zero skipped/flaky tests. `npm audit` reported zero known vulnerabilities for this dependency set at that check. Installed npm tooling occupied about 18.7 MB; no browser binary was installed.
+Core smoke baseline verification on 2026-10-21: Node 24.15.0, npm 11.12.1, Windows, installed Chrome 155.0.8059.85. A clean offline `npm ci --ignore-scripts` from the populated package cache installed the three locked packages. Syntax checks and 64/64 Node tests passed; the final browser run passed 8/8 in 10.3 seconds, with zero skipped/flaky tests. `npm audit` reported zero known vulnerabilities for this dependency set at that check. Installed npm tooling occupied about 18.7 MB; no browser binary was installed.
 
-This smoke suite complements the 64 Node tests. It does not replace exhaustive decimal-boundary, malformed/oversized input, quota/corrupt-storage or concurrency tests already covered at adapter/unit level. It is not real-device, screen-reader, Firefox/WebKit, spreadsheet-application or operating-system matrix certification. The local result verifies Chrome on Windows; Linux CI and other channels remain unverified until executed there. Viewport emulation checks layout and keyboard, not a touch keyboard or physical phone.
+This smoke suite complements the 72 Node tests. It does not replace exhaustive decimal-boundary, malformed/oversized input, quota/corrupt-storage or concurrency tests already covered at adapter/unit level. It is not real-device, screen-reader, Firefox/WebKit, spreadsheet-application or operating-system matrix certification. The local result verifies Chrome on Windows; Linux CI and other channels remain unverified until executed there. Viewport emulation checks layout and keyboard, not a touch keyboard or physical phone.
 
 Official references: [Playwright configuration](https://playwright.dev/docs/test-configuration), [installed browser channels](https://playwright.dev/docs/browsers), [download events and saving files](https://playwright.dev/docs/downloads).
+
+Data-durability candidate verification: 72/72 Node and 11/11 browser tests (13.3 seconds), no skips/flaky/retries, same runtime/dependency set. The native prompt check uses headless Chrome after real UI activation; physical mobile and headed OS modal behavior remain unverified.
