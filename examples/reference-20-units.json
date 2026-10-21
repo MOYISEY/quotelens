@@ -1,0 +1,114 @@
+{
+  "version": 1,
+  "title": "Эталон 20 единиц / 20-unit reference",
+  "currency": "RUB",
+  "lang": "ru",
+  "demo": false,
+  "items": [
+    {
+      "id": "part",
+      "name": "Деталь T / Part T",
+      "spec": "Model T, grade 1 / модель T, сорт 1",
+      "quantity": "20",
+      "unit": "pcs"
+    }
+  ],
+  "suppliers": [
+    {
+      "id": "A",
+      "name": "Supplier A",
+      "currency": "RUB",
+      "shipping": "20000",
+      "fees": "0",
+      "discount": "0",
+      "minimum": "0",
+      "lead": "",
+      "terms": "",
+      "costsConfirmed": true,
+      "lines": {
+        "part": {
+          "price": "18000",
+          "basis": "unit",
+          "pack": "1",
+          "moq": "0",
+          "available": "",
+          "unit": "pcs",
+          "spec": "Model T, grade 1 / модель T, сорт 1",
+          "confirmed": true
+        }
+      }
+    },
+    {
+      "id": "B",
+      "name": "Supplier B",
+      "currency": "RUB",
+      "shipping": "50000",
+      "fees": "0",
+      "discount": "0",
+      "minimum": "0",
+      "lead": "",
+      "terms": "",
+      "costsConfirmed": true,
+      "lines": {
+        "part": {
+          "price": "17000",
+          "basis": "unit",
+          "pack": "1",
+          "moq": "0",
+          "available": "",
+          "unit": "pcs",
+          "spec": "Model T, grade 1 / модель T, сорт 1",
+          "confirmed": true
+        }
+      }
+    },
+    {
+      "id": "C",
+      "name": "Supplier C",
+      "currency": "RUB",
+      "shipping": "20000",
+      "fees": "0",
+      "discount": "0",
+      "minimum": "0",
+      "lead": "",
+      "terms": "",
+      "costsConfirmed": true,
+      "lines": {
+        "part": {
+          "price": "92000",
+          "basis": "pack",
+          "pack": "6",
+          "moq": "0",
+          "available": "",
+          "unit": "pcs",
+          "spec": "Model T, grade 1 / модель T, сорт 1",
+          "confirmed": true
+        }
+      }
+    },
+    {
+      "id": "D",
+      "name": "Supplier D",
+      "currency": "RUB",
+      "shipping": "20000",
+      "fees": "0",
+      "discount": "0",
+      "minimum": "0",
+      "lead": "",
+      "terms": "",
+      "costsConfirmed": true,
+      "lines": {
+        "part": {
+          "price": "16000",
+          "basis": "unit",
+          "pack": "1",
+          "moq": "0",
+          "available": "18",
+          "unit": "pcs",
+          "spec": "Model T, grade 1 / модель T, сорт 1",
+          "confirmed": true
+        }
+      }
+    }
+  ]
+}

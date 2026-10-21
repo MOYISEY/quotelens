@@ -1,0 +1,6 @@
+node_modules/
+dist/
+.quotelens-build-*/
+.quotelens-test-*/
+*.log
+.DS_Store

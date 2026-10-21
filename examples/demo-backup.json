@@ -1,0 +1,161 @@
+{
+  "version": 1,
+  "title": "Office essentials / Канцелярия",
+  "currency": "RUB",
+  "lang": "ru",
+  "demo": true,
+  "items": [
+    {
+      "id": "notebook",
+      "name": "Блокнот A5 / A5 notebook",
+      "spec": "A5, 80 листов / sheets, 80 г/м², клетка / squared",
+      "quantity": "12",
+      "unit": "pcs"
+    },
+    {
+      "id": "pen",
+      "name": "Ручка / Ballpoint pen",
+      "spec": "Синяя / blue, 0.7 mm, модель / model P07",
+      "quantity": "20",
+      "unit": "pcs"
+    }
+  ],
+  "suppliers": [
+    {
+      "id": "atlas",
+      "name": "Atlas Supply",
+      "currency": "RUB",
+      "shipping": "600",
+      "fees": "0",
+      "discount": "0",
+      "minimum": "0",
+      "lead": "3–5 дней / days",
+      "terms": "Фиксированная доставка / Fixed delivery",
+      "costsConfirmed": true,
+      "lines": {
+        "notebook": {
+          "price": "80",
+          "basis": "unit",
+          "pack": "6",
+          "moq": "12",
+          "available": "",
+          "unit": "pcs",
+          "spec": "A5, 80 листов / sheets, 80 г/м², клетка / squared",
+          "confirmed": true
+        },
+        "pen": {
+          "price": "25",
+          "basis": "unit",
+          "pack": "10",
+          "moq": "20",
+          "available": "",
+          "unit": "pcs",
+          "spec": "Синяя / blue, 0.7 mm, модель / model P07",
+          "confirmed": true
+        }
+      }
+    },
+    {
+      "id": "river",
+      "name": "River Office",
+      "currency": "RUB",
+      "shipping": "100",
+      "fees": "0",
+      "discount": "5",
+      "minimum": "0",
+      "lead": "2–3 дня / days",
+      "terms": "Скидка 5% только на товары / 5% off goods only",
+      "costsConfirmed": true,
+      "lines": {
+        "notebook": {
+          "price": "90",
+          "basis": "unit",
+          "pack": "1",
+          "moq": "0",
+          "available": "",
+          "unit": "pcs",
+          "spec": "A5, 80 листов / sheets, 80 г/м², клетка / squared",
+          "confirmed": true
+        },
+        "pen": {
+          "price": "28",
+          "basis": "unit",
+          "pack": "1",
+          "moq": "0",
+          "available": "",
+          "unit": "pcs",
+          "spec": "Синяя / blue, 0.7 mm, модель / model P07",
+          "confirmed": true
+        }
+      }
+    },
+    {
+      "id": "bulk",
+      "name": "Bulk Direct",
+      "currency": "RUB",
+      "shipping": "0",
+      "fees": "0",
+      "discount": "0",
+      "minimum": "0",
+      "lead": "5–7 дней / days",
+      "terms": "Большие упаковки и MOQ / Large packs & MOQ",
+      "costsConfirmed": true,
+      "lines": {
+        "notebook": {
+          "price": "65",
+          "basis": "unit",
+          "pack": "20",
+          "moq": "40",
+          "available": "",
+          "unit": "pcs",
+          "spec": "A5, 80 листов / sheets, 80 г/м², клетка / squared",
+          "confirmed": true
+        },
+        "pen": {
+          "price": "20",
+          "basis": "unit",
+          "pack": "50",
+          "moq": "0",
+          "available": "",
+          "unit": "pcs",
+          "spec": "Синяя / blue, 0.7 mm, модель / model P07",
+          "confirmed": true
+        }
+      }
+    },
+    {
+      "id": "unknown",
+      "name": "Quick Quote",
+      "currency": "RUB",
+      "shipping": "",
+      "fees": "0",
+      "discount": "0",
+      "minimum": "0",
+      "lead": "",
+      "terms": "Доставку и сборы уточнить / Delivery & fees pending",
+      "costsConfirmed": false,
+      "lines": {
+        "notebook": {
+          "price": "55",
+          "basis": "unit",
+          "pack": "1",
+          "moq": "0",
+          "available": "",
+          "unit": "pcs",
+          "spec": "A5, 80 листов / sheets, 80 г/м², клетка / squared",
+          "confirmed": false
+        },
+        "pen": {
+          "price": "18",
+          "basis": "unit",
+          "pack": "1",
+          "moq": "0",
+          "available": "",
+          "unit": "pcs",
+          "spec": "Синяя / blue, 0.7 mm, модель / model P07",
+          "confirmed": false
+        }
+      }
+    }
+  ]
+}
