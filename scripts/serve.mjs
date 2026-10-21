@@ -6,7 +6,7 @@ const portIndex=process.argv.indexOf('--port');
 const port=portIndex>=0?Number(process.argv[portIndex+1]):4173;
 if(!Number.isInteger(port)||port<1024||port>65535)throw new Error('Port must be 1024–65535');
 const types={'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.svg':'image/svg+xml','.json':'application/json; charset=utf-8'};
-const allowed=new Set(['/','/index.html','/favicon.svg','/src/styles.css','/src/app.js','/src/engine.js','/src/io.js','/build.json']);
+const allowed=new Set(['/','/index.html','/favicon.svg','/src/styles.css','/src/app.js','/src/engine.js','/src/io.js','/src/explain.js','/build.json']);
 const server=createServer(async(req,res)=>{
   res.setHeader('X-Content-Type-Options','nosniff');res.setHeader('Referrer-Policy','no-referrer');res.setHeader('Cache-Control','no-store');
   if(!['GET','HEAD'].includes(req.method)){res.writeHead(405);res.end('Read-only local server');return;}

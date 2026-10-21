@@ -1,5 +1,6 @@
 import { demo, compare, money, CURRENCIES, UNITS, blankLine, blankSupplier, MAX_ITEMS, MAX_SUPPLIERS } from './engine.js';
 import { backup, restore, saveLocal, readLocal, exportInputCSV, importInputCSV, report, reportCSV, prepareImportText, STORAGE_KEY } from './io.js';
+import { explainComparison, previewQuote, decimalText } from './explain.js';
 
 const root = document.querySelector('#app');
 let state, tab = 'compare', activeSupplier = null, staged = null, importText = '', importError = '', toast = '', previous = null, storageBlocked = false, storageError = false, storageConflict = false;
@@ -80,11 +81,37 @@ function comparison(result) {
     <div class="stat"><span>${t('Допущено к сравнению','Ready to compare')}</span><strong>${result.eligibleCount}<em> / ${state.suppliers.length}</em></strong><small>${t('Полная корзина и известные расходы','Full basket and known costs')}</small></div>
     <div class="stat"><span>${t('Разница полных предложений','Complete offer spread')}</span><strong>${result.best === null ? '—' : cash(max - result.best)}</strong><small>${t('От минимума до максимума','From lowest to highest total')}</small></div>
   </section>
+  ${comparisonExplanation(result)}
   ${state.demo ? `<div class="demo-note"><span class="note-icon">i</span><p><strong>${t('Низкая цена за штуку — ещё не низкий итог.','A low unit price is only part of the story.')}</strong> ${t('Atlas проигрывает после доставки, Bulk закупает лишнее из-за MOQ, а дешёвый Quick Quote исключён: условия неполные.','Atlas loses after delivery, Bulk buys extra because of MOQ, and cheap Quick Quote is excluded: terms are incomplete.')}</p></div>` : ''}
   <section class="section"><div class="section-title"><div><h2>${t('Предложения поставщиков','Supplier quotes')}</h2><p>${t('Сравниваем всю корзину у одного поставщика.','Comparing the whole basket from one supplier.')}</p></div>${button(t('Редактировать →','Edit quotes →'),'edit','text-button')}</div>
     <div class="offer-grid">${state.suppliers.map((s,i) => offerCard(s, result.offers[i], result)).join('')}</div>
   </section>
   <section class="basket-summary panel"><div class="section-title"><div><h2>${t('Что нужно купить','What you need')}</h2><p>${state.items.length} ${t('позиции · спецификация обязательна','items · specification required')}</p></div>${button(t('Изменить корзину','Edit basket'),'edit','text-button')}</div><div class="basket-lines">${state.items.map((item,i) => `<div class="basket-line"><span class="item-index">${String(i+1).padStart(2,'0')}</span><div><strong>${esc(item.name)||'—'}</strong><p>${esc(item.spec)||t('Спецификация не указана','Missing specification')}</p></div><span class="quantity">${esc(item.quantity)||'—'} <small>${unit(item.unit)}</small></span></div>`).join('')}</div></section>`;
+}
+function comparisonExplanation(result) {
+  const explanation = explainComparison(result);
+  const name = id => esc(state.suppliers.find(s => s.id === id)?.name || t('Без названия','Unnamed'));
+  const excluded = explanation.excluded.length ? `<p class="explanation-note">${t('Вне сравнения','Excluded')}: ${explanation.excluded.map(name).join(', ')}. ${t('Известная часть расходов не является полным итогом.','Known partial costs are not complete totals.')}</p>` : '';
+  if (explanation.kind === 'insufficient') {
+    return `<section class="panel cost-explanation incomplete-explanation" data-testid="cost-explanation"><h2>${t('Для сравнения нужны два полных предложения','Two complete quotes are needed to compare')}</h2><p>${explanation.eligible.length ? t('Полное предложение','Complete quote') + ': ' + explanation.eligible.map(name).join(', ') + '. ' + t('Пока недостаточно данных для выбора минимума.','There is not enough data to identify a comparison minimum yet.') : t('Полных сопоставимых предложений пока нет. Проверьте расходы и подтверждения.','There are no complete comparable quotes yet. Review costs and confirmations.')}</p>${excluded}</section>`;
+  }
+  const reference = name(explanation.referenceId), competitor = name(explanation.competitorId);
+  const signed = value => (value > 0n ? '+' : '') + cash(value);
+  const labels = { goods: t('Товары','Goods'), shipping: t('Доставка','Delivery'), fees: t('Сборы','Fees'), discount: t('Влияние скидки','Discount effect') };
+  const title = explanation.kind === 'tie' ? `${t('Ничья','Tie')}: ${explanation.leaders.map(name).join(', ')}` : t('Почему этот итог ниже','Why this total is lower');
+  const sentence = explanation.kind === 'tie' ? `${cash(explanation.referenceTotal)} ${t('у каждого из этих поставщиков. Единственного минимума нет.','for each of these suppliers. There is no single lowest quote.')}` : `${reference} ${t('дешевле','costs less than')} ${competitor} ${t('на','by')} <strong>${cash(explanation.delta)}</strong>.`;
+  return `<section class="panel cost-explanation" data-testid="cost-explanation"><p class="eyebrow">${t('ТОЧНОЕ СРАВНЕНИЕ ПОЛНОЙ КОРЗИНЫ','EXACT FULL-BASKET COMPARISON')}</p><h2>${title}</h2><p class="explanation-summary">${sentence}</p><p class="explanation-direction">${explanation.kind === 'tie' ? t('Разница двух равных итогов','Difference between two tied totals') : t('Ближайшее полное предложение к минимуму','Nearest complete quote to the minimum')}: <strong>${competitor}</strong> − <strong>${reference}</strong>.</p>
+    <dl class="contribution-grid">${Object.entries(explanation.contributions).map(([key,value]) => `<div><dt>${labels[key]}</dt><dd class="${value < 0n ? 'cost-down' : value > 0n ? 'cost-up' : ''}" data-contribution="${key}">${signed(value)}</dd></div>`).join('')}</dl>
+    <div class="contribution-total"><span>${t('Итоговая разница','Total difference')}</span><strong data-testid="explained-delta">${signed(explanation.delta)}</strong></div>
+    <p class="explanation-note">${t('«+» делает сравниваемое предложение дороже, «−» — дешевле.','“+” makes the compared quote more expensive; “−” makes it cheaper.')} ${t('Влияние скидки','Discount effect')} = ${t('скидка у','discount from')} ${reference} − ${t('скидка у','discount from')} ${competitor}.</p>${excluded}</section>`;
+}
+function quotePreview(item, quote, currency) {
+  const preview = previewQuote(item, quote);
+  if (preview.kind === 'invalid') return `<p class="preview-empty">${preview.reason === 'unit' ? t('Единицы не совпадают — проверьте предложение.','Units do not match — review this quote.') : t('Заполните корректную цену, количество, размер упаковки и MOQ, чтобы увидеть расчёт строки.','Enter a valid price, required quantity, pack size and MOQ to see the line calculation.')}</p>`;
+  const line = preview.line, price = decimalText(line.price,4,state.lang) + ' ' + currency;
+  const original = quote.basis === 'pack' ? `${price} ${t('за 1 упаковку','per pack')} (${line.pack} ${unit(item.unit)})` : `${price} ${t('за 1','per 1')} ${unit(item.unit)}`;
+  const indicative = preview.indicativeUnitPrice === null ? '' : `<small>${line.price > 0n && preview.indicativeUnitPrice === 0n ? t('Менее 0,0001','Less than 0.0001') : '≈ ' + decimalText(preview.indicativeUnitPrice,4,state.lang)} ${currency}/${unit(item.unit)} · ${t('только справочно; итог из исходной цены упаковки','indicative only; total uses the original pack price')}</small>`;
+  return `<strong>${original}</strong><p>${t('Купить','Buy')} <b>${line.packs} ${t('уп.','packs')} × ${line.pack} = ${line.bought} ${unit(item.unit)}</b> · ${t('излишек','surplus')} ${line.surplus} ${unit(item.unit)}</p><p>${t('Точная стоимость строки','Exact line cost')}: <b>${cash(line.cost,currency)}</b></p>${indicative}<small>${t('Стоимость строки без доставки и сборов.','Line cost excludes delivery and fees.')}</small>`;
 }
 function offerCard(s, o, result) {
   const best = result.winners.includes(s.id);
@@ -128,14 +155,14 @@ function supplierEditor(s,o) {
     ${field(t('Минимум суммы товаров до скидки','Minimum goods before discount'),s.minimum,`inputmode="decimal" ${attrs('minimum')}`)}
     ${field(t('Срок (необязательно)','Lead time (optional)'),s.lead,attrs('lead'))}${field(t('Условия / состав сборов','Terms / fee breakdown'),s.terms,attrs('terms'))}</div>
     ${checkbox(t('Все обязательные расходы учтены: доставка и сборы известны, остальные условия проверены.','All mandatory costs are included: delivery and fees are known, remaining terms reviewed.'),s.costsConfirmed,attrs('costsConfirmed'))}
-    ${state.items.map(item => { const q=s.lines[item.id]; const a=key=>`data-scope="line" data-id="${esc(s.id)}" data-item="${esc(item.id)}" data-field="${key}"`; return `<fieldset class="quote-line"><legend>${esc(item.name)||t('Товар','Item')} <span>· ${t('нужно','need')} ${esc(item.quantity)} ${unit(item.unit)}</span></legend><p class="required-spec">${t('Требование','Requirement')}: ${esc(item.spec)||'—'}</p><div class="form-grid quote-grid">
+    ${state.items.map(item => { const q=s.lines[item.id], previewId=`preview:${s.id}:${item.id}`; const a=key=>`data-scope="line" data-id="${esc(s.id)}" data-item="${esc(item.id)}" data-field="${key}" aria-describedby="${esc(previewId)}"`; return `<fieldset class="quote-line"><legend>${esc(item.name)||t('Товар','Item')} <span>· ${t('нужно','need')} ${esc(item.quantity)} ${unit(item.unit)}</span></legend><p class="required-spec">${t('Требование','Requirement')}: ${esc(item.spec)||'—'}</p><div class="form-grid quote-grid">
       ${field(t('Цена (до 4 знаков)','Price (up to 4 decimals)'),q.price,`inputmode="decimal" ${a('price')}`)}
       ${select(t('Цена указана за','Price is per'),options(['unit','pack'],q.basis,v=>v==='unit'?t('1 единицу','1 unit'):t('1 упаковку','1 pack')),a('basis'))}
       ${select(t('Единица предложения','Quote unit'),options(UNITS,q.unit,unit),a('unit'))}
       ${field(t('Единиц в упаковке','Units per pack'),q.pack,`inputmode="numeric" ${a('pack')}`)}
       ${field(t('MOQ, единиц (0 = нет)','MOQ, units (0 = none)'),q.moq,`inputmode="numeric" ${a('moq')}`)}
       ${field(t('Доступно, единиц (необязательно)','Available units (optional)'),q.available,`inputmode="numeric" placeholder="${t('Не проверяется','Not checked')}" ${a('available')}`)}
-    </div><label class="field"><span>${t('Предлагаемый товар / модель / качество','Offered product / model / quality')}</span><textarea rows="2" maxlength="500" ${a('spec')}>${esc(q.spec)}</textarea></label>
+    </div><div class="quote-preview" id="${esc(previewId)}" data-testid="${esc(previewId)}">${quotePreview(item,q,s.currency)}</div><label class="field"><span>${t('Предлагаемый товар / модель / качество','Offered product / model / quality')}</span><textarea rows="2" maxlength="500" ${a('spec')}>${esc(q.spec)}</textarea></label>
     ${checkbox(t('Я проверил(а): это тот же товар, спецификация и качество сопоставимы.','I checked: this is the same product, with comparable specification and quality.'),q.confirmed,a('confirmed'))}
     </fieldset>`; }).join('')}
     ${o.issues.length?`<div class="validation"><strong>${t('Перед сравнением проверьте','Check before comparing')}</strong><ul>${o.issues.map(v=>`<li>${esc(issueText(v))}</li>`).join('')}</ul></div>`:''}
@@ -194,6 +221,8 @@ function refreshEditor() {
     const legends=current.querySelectorAll('.quote-line legend'), specs=current.querySelectorAll('.required-spec');
     next.querySelectorAll('.quote-line legend').forEach((v,i)=>legends[i].innerHTML=v.innerHTML);
     next.querySelectorAll('.required-spec').forEach((v,i)=>specs[i].innerHTML=v.innerHTML);
+    const previews=current.querySelectorAll('.quote-preview');
+    next.querySelectorAll('.quote-preview').forEach((v,i)=>previews[i].innerHTML=v.innerHTML);
   }
   for(const el of root.querySelectorAll('[data-scope="line"][data-field="confirmed"]'))el.checked=state.suppliers.find(s=>s.id===el.dataset.id).lines[el.dataset.item].confirmed;
   const oldIssues=root.querySelector('.editor-panel > .alert'), newIssues=fresh.querySelector('.editor-panel > .alert');

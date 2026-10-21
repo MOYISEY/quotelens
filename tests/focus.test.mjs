@@ -5,6 +5,7 @@ import { randomUUID } from 'node:crypto';
 import vm from 'node:vm';
 import * as engine from '../src/engine.js';
 import * as io from '../src/io.js';
+import * as explain from '../src/explain.js';
 
 // Run the actual UI controller against a small DOM adapter. Replacing innerHTML
 // discards focus just as the browser does; selectors resolve real rendered tags.
@@ -34,7 +35,7 @@ function harness() {
   const records=new Map();const storage={getItem:key=>records.get(key)??null,setItem:(key,value)=>records.set(key,value)};
   const data=engine.demo();data.items=data.items.slice(0,1);data.suppliers=data.suppliers.slice(0,2);data.lang='en';
   io.saveLocal(storage,data);
-  vm.runInNewContext(source,{...engine,...io,document,window:{addEventListener(){}},localStorage:storage,crypto:{randomUUID},structuredClone,Intl,setTimeout,URL,Blob});
+  vm.runInNewContext(source,{...engine,...io,...explain,document,window:{addEventListener(){}},localStorage:storage,crypto:{randomUUID},structuredClone,Intl,setTimeout,URL,Blob});
   function click(selector){const node=root.querySelector(selector);assert.ok(node,selector);assert.equal(node.disabled,false);node.focus();listeners.click({target:node});return document.activeElement;}
   return {click,active:()=>document.activeElement,state:()=>io.readLocal(storage),enter(){const node=document.activeElement;assert.ok(node.dataset.action,'active control has no action');assert.equal(node.disabled,false);listeners.click({target:node});return document.activeElement;}};
 }

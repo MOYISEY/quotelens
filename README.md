@@ -33,6 +33,10 @@ Open `http://127.0.0.1:4173`. For another port: `node scripts/serve.mjs --dist -
 
 The first visit contains fictional data: River Office totals 1,658 RUB; Atlas totals 2,060 after delivery; Bulk totals 3,600 because of packs/MOQ; cheap Quick Quote is excluded because its terms are incomplete. Use **New basket** for your own inputs. The UI supports Russian and English on desktop and mobile.
 
+The comparison explains the minimum against the nearest complete quote, with signed contributions from goods, delivery, fees and the discount effect. These contributions sum to the exact total difference. For example, a competitor can have goods 50 RUB cheaper but delivery 80 RUB higher, making its full basket 30 RUB higher. Excluded quotes are named separately; ties and fewer than two complete quotes never produce a unique winner.
+
+The editor also reads the entered price back beside each line: 100 RUB per pack of 12, 2 packs × 12 = 24 units, exact line cost 200 RUB. Selecting 100 per unit instead shows 2,400 RUB. An approximate per-unit price is explicitly indicative; totals always use the original entered price and the existing exact arithmetic. Empty or invalid inputs show an incomplete preview rather than an invented zero.
+
 ## Exact calculation
 
 ```text

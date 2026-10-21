@@ -2,7 +2,7 @@ import { mkdir, copyFile, readFile, writeFile, mkdtemp, rm, rename, realpath, ls
 import { createHash } from 'node:crypto';
 import { resolve, relative } from 'node:path';
 const root = await realpath(resolve(import.meta.dirname, '..'));
-const files = ['index.html','favicon.svg','src/styles.css','src/app.js','src/engine.js','src/io.js'];
+const files = ['index.html','favicon.svg','src/styles.css','src/app.js','src/engine.js','src/io.js','src/explain.js'];
 const destination=resolve(root,'dist');
 // A literal project child only; never recursively remove a link or an outside path.
 if(relative(root,destination)!=='dist')throw new Error('Unsafe build target');
