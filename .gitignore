@@ -4,3 +4,4 @@ dist/
 .quotelens-test-*/
 *.log
 .DS_Store
+browser-artifacts/

@@ -1,12 +1,14 @@
 # Checks and practical limits
 
-Run on Node.js 22+ with no npm dependencies:
+Run the core checks on Node.js 22+ with no runtime npm dependencies:
 
 ```sh
 npm run check
 npm test
 npm run build
 ```
+
+Optional reproducible browser smoke: `npm ci --ignore-scripts`, then `npm run test:browser` with Chrome already installed. The eight scenarios use a fresh context for each test, a separate loopback server, synthetic fixtures, real file downloads/uploads, explicit assertions, and failure reports. The suite does not attach to an existing browser session. See [setup and coverage](docs/BROWSER-SMOKE.md). The existing GitHub workflow has not been changed to run it.
 
 The 64 tests cover exact decimal parsing and rounding, unit/pack pricing, whole packs, MOQ in item units, surplus, minimum order, stock, zero/empty/negative values, unknown costs, manual comparability, mismatched currency/units, ties, CSV/JSON roundtrips, malformed/oversized input, CSV formula escaping, storage-adapter failures, clean build output, keyboard focus after add/remove/navigation actions, exact signed cost explanations, and normalized line previews.
 

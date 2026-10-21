@@ -1,0 +1,164 @@
+{
+  "version": 1,
+  "title": "Isolated browser smoke v1 / synthetic only",
+  "currency": "RUB",
+  "lang": "en",
+  "demo": false,
+  "items": [
+    {
+      "id": "notebook",
+      "name": "Блокнот \"A5\", набор / Notebook",
+      "spec": "A5, 80 sheets, model N80",
+      "quantity": "24",
+      "unit": "pcs"
+    },
+    {
+      "id": "pen",
+      "name": "Ручка / Pen",
+      "spec": "Blue, 0.7 mm, model P07",
+      "quantity": "10",
+      "unit": "pcs"
+    },
+    {
+      "id": "folder",
+      "name": "Папка / Folder",
+      "spec": "A4, model F01",
+      "quantity": "5",
+      "unit": "pcs"
+    }
+  ],
+  "suppliers": [
+    {
+      "id": "north",
+      "name": "North Supply",
+      "currency": "RUB",
+      "shipping": "10",
+      "fees": "0",
+      "discount": "0",
+      "minimum": "0",
+      "lead": "",
+      "terms": "=HYPERLINK(\"https://example.invalid\",\"synthetic\")",
+      "costsConfirmed": true,
+      "lines": {
+        "notebook": {
+          "price": "12.5",
+          "basis": "unit",
+          "pack": "1",
+          "moq": "0",
+          "available": "",
+          "unit": "pcs",
+          "spec": "A5, 80 sheets, model N80",
+          "confirmed": true
+        },
+        "pen": {
+          "price": "3",
+          "basis": "unit",
+          "pack": "1",
+          "moq": "0",
+          "available": "",
+          "unit": "pcs",
+          "spec": "Blue, 0.7 mm, model P07",
+          "confirmed": true
+        },
+        "folder": {
+          "price": "4",
+          "basis": "unit",
+          "pack": "1",
+          "moq": "0",
+          "available": "",
+          "unit": "pcs",
+          "spec": "A4, model F01",
+          "confirmed": true
+        }
+      }
+    },
+    {
+      "id": "box",
+      "name": "Box Depot",
+      "currency": "RUB",
+      "shipping": "90",
+      "fees": "0",
+      "discount": "0",
+      "minimum": "0",
+      "lead": "",
+      "terms": "",
+      "costsConfirmed": true,
+      "lines": {
+        "notebook": {
+          "price": "100",
+          "basis": "pack",
+          "pack": "12",
+          "moq": "0",
+          "available": "",
+          "unit": "pcs",
+          "spec": "A5, 80 sheets, model N80",
+          "confirmed": true
+        },
+        "pen": {
+          "price": "5",
+          "basis": "unit",
+          "pack": "1",
+          "moq": "0",
+          "available": "",
+          "unit": "pcs",
+          "spec": "Blue, 0.7 mm, model P07",
+          "confirmed": true
+        },
+        "folder": {
+          "price": "10",
+          "basis": "unit",
+          "pack": "1",
+          "moq": "0",
+          "available": "",
+          "unit": "pcs",
+          "spec": "A4, model F01",
+          "confirmed": true
+        }
+      }
+    },
+    {
+      "id": "budget",
+      "name": "Budget Works",
+      "currency": "RUB",
+      "shipping": "",
+      "fees": "0",
+      "discount": "0",
+      "minimum": "0",
+      "lead": "",
+      "terms": "",
+      "costsConfirmed": true,
+      "lines": {
+        "notebook": {
+          "price": "10",
+          "basis": "unit",
+          "pack": "1",
+          "moq": "0",
+          "available": "",
+          "unit": "pcs",
+          "spec": "A5, 80 sheets, model N80",
+          "confirmed": true
+        },
+        "pen": {
+          "price": "1.8",
+          "basis": "unit",
+          "pack": "1",
+          "moq": "0",
+          "available": "",
+          "unit": "pcs",
+          "spec": "Blue, 0.7 mm, model P07",
+          "confirmed": true
+        },
+        "folder": {
+          "price": "2",
+          "basis": "unit",
+          "pack": "1",
+          "moq": "0",
+          "available": "",
+          "unit": "pcs",
+          "spec": "A4, model F01",
+          "confirmed": true
+        }
+      }
+    }
+  ]
+}

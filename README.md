@@ -8,7 +8,7 @@
 
 ## Run locally
 
-Node.js **22+**; tested on Node 24. No external npm dependencies and no installation step.
+Node.js **22+**; tested on Node 24. The application and Node unit tests have no runtime npm dependencies or installation step. Optional browser tests use locked development tooling.
 
 ```sh
 git clone https://github.com/MOYISEY/quotelens.git
@@ -20,6 +20,15 @@ npm start
 ```
 
 Open `http://127.0.0.1:4173`. For another port: `node scripts/serve.mjs --dist --port 4827`. `npm run dev` serves source files. The server listens on loopback and serves an explicit static allowlist. Stop with Ctrl+C.
+
+For a fresh-context, local browser smoke run with an existing Chrome installation:
+
+```sh
+npm ci --ignore-scripts
+npm run test:browser
+```
+
+This builds and starts its own loopback server, performs actual file export/import and keyboard checks, and stops the server. It never uses a personal browser profile or the public demo. No browser binaries are downloaded automatically. See [browser smoke setup, assertions and limits](docs/BROWSER-SMOKE.md).
 
 ## What it compares
 
